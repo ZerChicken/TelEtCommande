@@ -1,5 +1,6 @@
 import os
 import platform
+import webbrowser
 from flask import Flask, jsonify, request
 import pyautogui
 
@@ -93,6 +94,22 @@ def press_key(action_type):
     return jsonify(
         {'status': 'error', 'message': 'Action non autorisée'}
     ), 400
+
+
+# Route pour ouvrir une URL directement dans le navigateur de la machine distante
+@app.route('/open-url', methods=['POST'])
+def open_url():
+  try:
+    data = request.json or {}
+    url = data.get('url', '')
+    if url:
+      webbrowser.open(url)
+      print(f'[+] URL ouverte sur la machine distante : {url}')
+      return jsonify({'status': 'success', 'message': 'URL ouverte !'}), 200
+    return jsonify({'status': 'error', 'message': 'URL vide'}), 400
+  except Exception as e:
+    print(f"[-] Erreur lors de l'ouverture de l'URL : {str(e)}")
+    return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
 @app.route('/type', methods=['POST'])
