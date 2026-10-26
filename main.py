@@ -33,6 +33,7 @@ def press_key(action_type):
       'right',
       'volumeup',
       'volumedown',
+      'volumemute',
       'click',
       'ctrl-w',
       'browser-back',
@@ -57,14 +58,15 @@ def press_key(action_type):
         pyautogui.click()
       elif action_type == 'space':
         pyautogui.press('space')
+      elif action_type == 'volumemute':
+        pyautogui.press('volumemute')
       elif action_type == 'sleep':
-        # Commande de mise en veille adaptée au système d'exploitation cible
         system_os = platform.system()
         if system_os == 'Windows':
           os.system('rundll32.exe powrprof.dll,SetSuspendState 0,1,0')
         elif system_os == 'Linux':
           os.system('systemctl suspend')
-        elif system_os == 'Darwin':  # macOS
+        elif system_os == 'Darwin':
           os.system('pmset sleepnow')
       elif action_type == 'up':
         pyautogui.moveRel(0, -MOVE_PIXELS)
