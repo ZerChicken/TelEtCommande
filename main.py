@@ -21,23 +21,24 @@ def after_request(response):
 
 @app.route('/press/<key>', methods=['GET', 'POST'])
 def press_key(key):
-  touches_autorisees = ['escape', 'tab', 'enter', 'up', 'down', 'left', 'right']
+    # Ajout de 'shift-tab' dans les touches autorisées
+    touches_autorisees = ['escape', 'tab', 'shift-tab', 'enter', 'up', 'down', 'left', 'right']
 
-  if key in touches_autorisees:
-    try:
-      pyautogui.press(key)
-      print(f'[+] Touche simulée avec succès : {key}')
-      return jsonify(
-          {'status': 'success', 'message': f'Touche {key} simulée !'}
-      ), 200
-    except Exception as e:
-      print(f'[-] Erreur lors de la simulation de {key}: {str(e)}')
-      return jsonify({'status': 'error', 'message': str(e)}), 500
-  else:
-    print(f'[-] Tentative de touche non autorisée : {key}')
-    return jsonify(
-        {'status': 'error', 'message': 'Touche non autorisée'}
-    ), 400
+    if key in touches_autorisees:
+        try:
+            if key == 'shift-tab':
+                pyautogui.hotkey('shift', 'tab')
+            else:
+                pyautogui.press(key)
+                
+            print(f"[+] Action simulée avec succès : {key}")
+            return jsonify({"status": "success", "message": f"Action {key} simulée !"}), 200
+        except Exception as e:
+            print(f"[-] Erreur lors de la simulation de {key}: {str(e)}")
+            return jsonify({"status": "error", "message": str(e)}), 500
+    else:
+        print(f"[-] Tentative de touche non autorisée : {key}")
+        return jsonify({"status": "error", "message": "Touche non autorisée"}), 400
 
 
 if __name__ == '__main__':
