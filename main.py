@@ -1,18 +1,26 @@
-"""
-Généré par Gemini
-"""
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify
 import pyautogui
 
-# Désactive la sécurité de coin d'écran PyAutoGUI (optionnel, évite les blocages si la souris bouge)
 pyautogui.FAILSAFE = False
 
 app = Flask(__name__)
 
 
+# Ajout des en-têtes CORS pour autoriser le site web à contacter le serveur Python
+@app.after_request
+def after_request(response):
+  response.headers.add('Access-Control-Allow-Origin', '*')
+  response.headers.add(
+      'Access-Control-Allow-Headers', 'Content-Type,Authorization'
+  )
+  response.headers.add(
+      'Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS'
+  )
+  return response
+
+
 @app.route('/press/<key>', methods=['GET', 'POST'])
 def press_key(key):
-  # Liste des touches autorisées pour éviter toute exécution indésirable
   touches_autorisees = ['escape', 'tab', 'enter', 'up', 'down', 'left', 'right']
 
   if key in touches_autorisees:
@@ -33,8 +41,6 @@ def press_key(key):
 
 
 if __name__ == '__main__':
-  # host='0.0.0.0' permet d'écouter sur toutes les interfaces réseau, y compris Tailscale
-  # Le port 5000 est utilisé par défaut
-  print("=== Serveur de télécommande démarré ===")
-  print("En attente de requêtes via Tailscale...")
+  print('=== Serveur de télécommande démarré ===')
+  print('En attente de requêtes via Tailscale...')
   app.run(host='0.0.0.0', port=5000)
