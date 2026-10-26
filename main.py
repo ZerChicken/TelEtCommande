@@ -1,3 +1,5 @@
+import os
+import platform
 from flask import Flask, jsonify, request
 import pyautogui
 
@@ -18,7 +20,6 @@ def after_request(response):
   return response
 
 
-# Route pour presser une touche ou effectuer un raccourci prédéfini
 @app.route('/press/<action_type>', methods=['GET', 'POST'])
 def press_key(action_type):
   actions_autorisees = [
@@ -36,9 +37,10 @@ def press_key(action_type):
       'ctrl-w',
       'browser-back',
       'browser-forward',
+      'space',
+      'sleep',
   ]
 
-  # Distance de déplacement du curseur pour les flèches (20 pixels)
   MOVE_PIXELS = 20
 
   if action_type in actions_autorisees:
@@ -48,14 +50,22 @@ def press_key(action_type):
       elif action_type == 'ctrl-w':
         pyautogui.hotkey('ctrl', 'w')
       elif action_type == 'browser-back':
-        # Simule le bouton "Précédent" du navigateur (Alt + Flèche Gauche)
         pyautogui.hotkey('alt', 'left')
       elif action_type == 'browser-forward':
-        # Simule le bouton "Suivant" du navigateur (Alt + Flèche Droite)
         pyautogui.hotkey('alt', 'right')
       elif action_type == 'click':
         pyautogui.click()
-      # Les flèches déplacent désormais le curseur de la souris de 20px
+      elif action_type == 'space':
+        pyautogui.press('space')
+      elif action_type == 'sleep':
+        # Commande de mise en veille adaptée au système d'exploitation cible
+        system_os = platform.system()
+        if system_os == 'Windows':
+          os.system('rundll32.exe powrprof.dll,SetSuspendState 0,1,0')
+        elif system_os == 'Linux':
+          os.system('systemctl suspend')
+        elif system_os == 'Darwin':  # macOS
+          os.system('pmset sleepnow')
       elif action_type == 'up':
         pyautogui.moveRel(0, -MOVE_PIXELS)
       elif action_type == 'down':
@@ -83,7 +93,6 @@ def press_key(action_type):
     ), 400
 
 
-# Route pour taper du texte arbitraire envoyé depuis le champ de saisie
 @app.route('/type', methods=['POST'])
 def type_text():
   try:
@@ -99,7 +108,6 @@ def type_text():
     return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
-# Route pour déplacer la souris dynamiquement (ex: joystick)
 @app.route('/move', methods=['POST'])
 def move_mouse():
   try:
