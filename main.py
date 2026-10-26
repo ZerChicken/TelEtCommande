@@ -29,6 +29,8 @@ def press_key(action_type):
         'fullscreen',
         'scrollup',
         'scrolldown',
+        'pageup',
+        'pagedown',
         'enter',
         'up',
         'down',
@@ -52,10 +54,10 @@ def press_key(action_type):
             match action_type:
                 case 'fullscreen':
                     pyautogui.press('f')
-                case 'scrollup':
-                    pyautogui.scroll(300)
-                case 'scrolldown':
-                    pyautogui.scroll(-300)
+                case 'pageup' | 'scrollup':
+                    pyautogui.press('pageup')
+                case 'pagedown' | 'scrolldown':
+                    pyautogui.press('pagedown')
                 case 'ctrl-w':
                     pyautogui.hotkey('ctrl', 'w')
                 case 'browser-back':
@@ -80,10 +82,8 @@ def press_key(action_type):
                     pyautogui.moveRel(0, -MOVE_PIXELS)
                 case 'down':
                     pyautogui.moveRel(0, MOVE_PIXELS)
-                case 'left':
-                    pyautogui.moveRel(-MOVE_PIXELS, 0)
-                case 'right':
-                    pyautogui.moveRel(MOVE_PIXELS, 0)
+                case 'left' | 'right':
+                    pyautogui.press(action_type)
                 case 'volumeup' | 'volumedown':
                     pyautogui.press(action_type)
                 case _:
