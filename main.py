@@ -73,7 +73,7 @@ def press_key(action_type):
                 case 'sleep':
                     system_os = platform.system()
                     if system_os == 'Windows':
-                        os.system('rundll32.exe powrprof.dll,SetSuspendState 0,1,0')
+                        os.system('rundll32.exe powrprof.dll,SetSuspendState 0,0,0')
                     elif system_os == 'Linux':
                         os.system('systemctl suspend')
                     elif system_os == 'Darwin':
