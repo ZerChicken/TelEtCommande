@@ -5,8 +5,36 @@ from flask import Flask, jsonify, request
 import pyautogui
 
 pyautogui.FAILSAFE = False
+pyautogui.PAUSE = (
+    0  # Supprime le délai par défaut de PyAutoGUI pour une réactivité instantanée
+)
 
 app = Flask(__name__)
+
+# Variables constantes globales
+ACTIONS_AUTORISEES = (
+    'fullscreen',
+    'scrollup',
+    'scrolldown',
+    'pageup',
+    'pagedown',
+    'enter',
+    'up',
+    'down',
+    'left',
+    'right',
+    'volumeup',
+    'volumedown',
+    'volumemute',
+    'click',
+    'ctrl-w',
+    'browser-back',
+    'browser-forward',
+    'space',
+    'sleep',
+)
+
+MOVE_PIXELS = 20
 
 
 @app.after_request
@@ -25,31 +53,9 @@ def after_request(response):
 @app.route('/press/<action_type>', methods=['GET', 'POST'])
 def press_key(action_type):
     """Exécute une action clavier, souris ou système via un switch/case (match/case)."""
-    actions_autorisees = [
-        'fullscreen',
-        'scrollup',
-        'scrolldown',
-        'pageup',
-        'pagedown',
-        'enter',
-        'up',
-        'down',
-        'left',
-        'right',
-        'volumeup',
-        'volumedown',
-        'volumemute',
-        'click',
-        'ctrl-w',
-        'browser-back',
-        'browser-forward',
-        'space',
-        'sleep',
-    ]
+    global ACTIONS_AUTORISEES, MOVE_PIXELS
 
-    MOVE_PIXELS = 20
-
-    if action_type in actions_autorisees:
+    if action_type in ACTIONS_AUTORISEES:
         try:
             match action_type:
                 case 'fullscreen':
@@ -126,10 +132,12 @@ def type_text():
         data = request.json or {}
         text = data.get('text', '')
         if text:
-            pyautogui.write(text, interval=0.01)
+            pyautogui.write(
+                text, interval=0
+            )  # Frappe instantanée sans délai par caractère
             print(f"[+] Texte saisi : '{text}'")
             return jsonify({'status': 'success', 'message': 'Texte saisi !'}), 200
-        return jsonify({'status': 'error', 'message': 'URL vide'}), 400
+        return jsonify({'status': 'error', 'message': 'Texte vide'}), 400
     except Exception as e:
         print(f'[-] Erreur de saisie : {str(e)}')
         return jsonify({'status': 'error', 'message': str(e)}), 500
@@ -150,5 +158,6 @@ def move_mouse():
 
 
 if __name__ == '__main__':
-    print('=== Serveur Télécommande PC démarré ===')
-    app.run(host='0.0.0.0', port=5000)
+    print('=== Serveur Télécommande PC démarré (Ultra-rapide) ===')
+    # threaded=True permet de traiter les requêtes en parallèle (vital pour le joystick et la fluidité)
+    app.run(host='0.0.0.0', port=5000, threaded=True)
