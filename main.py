@@ -1,8 +1,13 @@
+import logging
 import os
 import platform
 import webbrowser
 from flask import Flask, jsonify, request
 import pyautogui
+
+# Désactiver les logs HTTP automatiques de Flask/Werkzeug pour garder la console propre
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
 
 pyautogui.FAILSAFE = False
 pyautogui.PAUSE = (
@@ -95,7 +100,6 @@ def press_key(action_type):
                 case _:
                     pyautogui.press(action_type)
 
-            print(f'[+] Action exécutée avec succès : {action_type}')
             return jsonify(
                 {'status': 'success', 'message': f'Action {action_type} exécutée !'}
             ), 200
@@ -117,8 +121,8 @@ def open_url():
         url = data.get('url', '')
         if url:
             webbrowser.open(url)
-            print(f'[+] URL ouverte sur la machine distante : {url}')
             return jsonify({'status': 'success', 'message': 'URL ouverte !'}), 200
+        print("[-] Erreur : URL vide lors de la tentative d'ouverture")
         return jsonify({'status': 'error', 'message': 'URL vide'}), 400
     except Exception as e:
         print(f"[-] Erreur lors de l'ouverture de l'URL : {str(e)}")
@@ -135,8 +139,8 @@ def type_text():
             pyautogui.write(
                 text, interval=0
             )  # Frappe instantanée sans délai par caractère
-            print(f"[+] Texte saisi : '{text}'")
             return jsonify({'status': 'success', 'message': 'Texte saisi !'}), 200
+        print("[-] Erreur : Texte vide lors de la tentative de saisie")
         return jsonify({'status': 'error', 'message': 'Texte vide'}), 400
     except Exception as e:
         print(f'[-] Erreur de saisie : {str(e)}')
@@ -154,10 +158,11 @@ def move_mouse():
             pyautogui.moveRel(dx, dy)
         return jsonify({'status': 'success'}), 200
     except Exception as e:
+        print(f'[-] Erreur lors du déplacement de la souris : {str(e)}')
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
 if __name__ == '__main__':
-    print('=== Serveur Télécommande PC démarré (Ultra-rapide) ===')
+    print('=== Serveur Télécommande PC démarré ===')
     # threaded=True permet de traiter les requêtes en parallèle (vital pour le joystick et la fluidité)
     app.run(host='0.0.0.0', port=5000, threaded=True)
