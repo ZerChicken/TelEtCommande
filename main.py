@@ -1,6 +1,7 @@
 import logging
 import os
 import platform
+import time
 import webbrowser
 from flask import Flask, jsonify, request
 import pyautogui
@@ -10,9 +11,7 @@ log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
 pyautogui.FAILSAFE = False
-pyautogui.PAUSE = (
-    0  # Supprime le délai par défaut de PyAutoGUI pour une réactivité instantanée
-)
+pyautogui.PAUSE = 0
 
 app = Flask(__name__)
 
@@ -42,6 +41,15 @@ ACTIONS_AUTORISEES = (
 MOVE_PIXELS = 20
 
 
+def reveiller_curseur():
+    """Effectue un micro-mouvement invisible pour forcer le système à réafficher le curseur."""
+    try:
+        pyautogui.moveRel(1, 0)
+        pyautogui.moveRel(-1, 0)
+    except:
+        pass
+
+
 @app.after_request
 def after_request(response):
     """Ajoute les en-têtes CORS à chaque réponse HTTP sortante."""
@@ -54,16 +62,10 @@ def after_request(response):
     )
     return response
 
-def reveiller_curseur():
-    """Effectue un micro-mouvement invisible pour forcer le système à réafficher le curseur."""
-    try:
-        pyautogui.moveRel(1, 0)
-        pyautogui.moveRel(-1, 0)
-    except:
-        pass
 
 @app.route('/press/<action_type>', methods=['GET', 'POST'])
 def press_key(action_type):
+    """Exécute une action clavier, souris ou système via un switch/case (match/case)."""
     global ACTIONS_AUTORISEES, MOVE_PIXELS
 
     if action_type in ACTIONS_AUTORISEES:
@@ -71,7 +73,7 @@ def press_key(action_type):
             match action_type:
                 case 'fullscreen':
                     pyautogui.press('f')
-                    reveiller_curseur() # Réaffiche le curseur en sortant/entrant du plein écran
+                    reveiller_curseur()
                 case 'pageup' | 'scrollup':
                     pyautogui.press('pageup')
                 case 'pagedown' | 'scrolldown':
@@ -83,11 +85,11 @@ def press_key(action_type):
                 case 'browser-forward':
                     pyautogui.hotkey('alt', 'right')
                 case 'click':
-                    reveiller_curseur() # Force l'affichage du curseur avant de cliquer
+                    reveiller_curseur()
                     pyautogui.click()
                 case 'space':
                     pyautogui.press('space')
-                    reveiller_curseur() # Réveille le curseur si une barre de contrôle vidéo s'affiche
+                    reveiller_curseur()
                 case 'volumemute':
                     pyautogui.press('volumemute')
                 case 'sleep':
@@ -109,11 +111,18 @@ def press_key(action_type):
                 case _:
                     pyautogui.press(action_type)
 
-            return jsonify({'status': 'success', 'message': f'Action {action_type} exécutée !'}), 200
+            return jsonify(
+                {'status': 'success', 'message': f'Action {action_type} exécutée !'}
+            ), 200
         except Exception as e:
+            print(f'[-] Erreur lors de l\'exécution de {action_type}: {str(e)}')
             return jsonify({'status': 'error', 'message': str(e)}), 500
     else:
-        return jsonify({'status': 'error', 'message': 'Action non autorisée'}), 400
+        print(f'[-] Tentative d\'action non autorisée : {action_type}')
+        return jsonify(
+            {'status': 'error', 'message': 'Action non autorisée'}
+        ), 400
+
 
 @app.route('/open-url', methods=['POST'])
 def open_url():
@@ -138,9 +147,7 @@ def type_text():
         data = request.json or {}
         text = data.get('text', '')
         if text:
-            pyautogui.write(
-                text, interval=0
-            )  # Frappe instantanée sans délai par caractère
+            pyautogui.write(text, interval=0)
             return jsonify({'status': 'success', 'message': 'Texte saisi !'}), 200
         print("[-] Erreur : Texte vide lors de la tentative de saisie")
         return jsonify({'status': 'error', 'message': 'Texte vide'}), 400
@@ -151,13 +158,32 @@ def type_text():
 
 @app.route('/move', methods=['POST'])
 def move_mouse():
-    """Déplace le curseur de la souris de manière relative sur la machine distante."""
+    """Déplace le curseur de la souris de manière fluide (lissage) sur la machine distante."""
     try:
         data = request.json or {}
         dx = int(data.get('dx', 0))
         dy = int(data.get('dy', 0))
         if dx != 0 or dy != 0:
-            pyautogui.moveRel(dx, dy)
+            # Lissage (interpolation) sur 6 micro-pas répartis sur ~120ms
+            steps = 6
+            duration = 0.12
+            step_dx = dx / steps
+            step_dy = dy / steps
+            sleep_time = duration / steps
+
+            cur_x = 0.0
+            cur_y = 0.0
+            for i in range(steps):
+                target_x = (i + 1) * step_dx
+                target_y = (i + 1) * step_dy
+                move_x = round(target_x - cur_x)
+                move_y = round(target_y - cur_y)
+                if move_x != 0 or move_y != 0:
+                    pyautogui.moveRel(move_x, move_y)
+                    cur_x += move_x
+                    cur_y += move_y
+                time.sleep(sleep_time)
+
         return jsonify({'status': 'success'}), 200
     except Exception as e:
         print(f'[-] Erreur lors du déplacement de la souris : {str(e)}')
@@ -166,5 +192,4 @@ def move_mouse():
 
 if __name__ == '__main__':
     print('=== Serveur Télécommande PC démarré ===')
-    # threaded=True permet de traiter les requêtes en parallèle (vital pour le joystick et la fluidité)
     app.run(host='0.0.0.0', port=5000, threaded=True)
