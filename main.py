@@ -1,7 +1,6 @@
 import logging
 import os
 import platform
-import time
 import webbrowser
 from flask import Flask, jsonify, request
 import pyautogui
@@ -158,32 +157,13 @@ def type_text():
 
 @app.route('/move', methods=['POST'])
 def move_mouse():
-    """Déplace le curseur de la souris de manière fluide (lissage) sur la machine distante."""
+    """Déplace directement le curseur de la souris sur la machine distante."""
     try:
-        data = request.json or {}
+        data = request.get_json(silent=True) or {}
         dx = int(data.get('dx', 0))
         dy = int(data.get('dy', 0))
         if dx != 0 or dy != 0:
-            # Lissage (interpolation) sur 6 micro-pas répartis sur ~120ms
-            steps = 6
-            duration = 0.12
-            step_dx = dx / steps
-            step_dy = dy / steps
-            sleep_time = duration / steps
-
-            cur_x = 0.0
-            cur_y = 0.0
-            for i in range(steps):
-                target_x = (i + 1) * step_dx
-                target_y = (i + 1) * step_dy
-                move_x = round(target_x - cur_x)
-                move_y = round(target_y - cur_y)
-                if move_x != 0 or move_y != 0:
-                    pyautogui.moveRel(move_x, move_y)
-                    cur_x += move_x
-                    cur_y += move_y
-                time.sleep(sleep_time)
-
+            pyautogui.moveRel(dx, dy)
         return jsonify({'status': 'success'}), 200
     except Exception as e:
         print(f'[-] Erreur lors du déplacement de la souris : {str(e)}')
