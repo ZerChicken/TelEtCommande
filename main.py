@@ -54,10 +54,16 @@ def after_request(response):
     )
     return response
 
+def reveiller_curseur():
+    """Effectue un micro-mouvement invisible pour forcer le système à réafficher le curseur."""
+    try:
+        pyautogui.moveRel(1, 0)
+        pyautogui.moveRel(-1, 0)
+    except:
+        pass
 
 @app.route('/press/<action_type>', methods=['GET', 'POST'])
 def press_key(action_type):
-    """Exécute une action clavier, souris ou système via un switch/case (match/case)."""
     global ACTIONS_AUTORISEES, MOVE_PIXELS
 
     if action_type in ACTIONS_AUTORISEES:
@@ -65,6 +71,7 @@ def press_key(action_type):
             match action_type:
                 case 'fullscreen':
                     pyautogui.press('f')
+                    reveiller_curseur() # Réaffiche le curseur en sortant/entrant du plein écran
                 case 'pageup' | 'scrollup':
                     pyautogui.press('pageup')
                 case 'pagedown' | 'scrolldown':
@@ -76,9 +83,11 @@ def press_key(action_type):
                 case 'browser-forward':
                     pyautogui.hotkey('alt', 'right')
                 case 'click':
+                    reveiller_curseur() # Force l'affichage du curseur avant de cliquer
                     pyautogui.click()
                 case 'space':
                     pyautogui.press('space')
+                    reveiller_curseur() # Réveille le curseur si une barre de contrôle vidéo s'affiche
                 case 'volumemute':
                     pyautogui.press('volumemute')
                 case 'sleep':
@@ -100,18 +109,11 @@ def press_key(action_type):
                 case _:
                     pyautogui.press(action_type)
 
-            return jsonify(
-                {'status': 'success', 'message': f'Action {action_type} exécutée !'}
-            ), 200
+            return jsonify({'status': 'success', 'message': f'Action {action_type} exécutée !'}), 200
         except Exception as e:
-            print(f'[-] Erreur lors de l\'exécution de {action_type}: {str(e)}')
             return jsonify({'status': 'error', 'message': str(e)}), 500
     else:
-        print(f'[-] Tentative d\'action non autorisée : {action_type}')
-        return jsonify(
-            {'status': 'error', 'message': 'Action non autorisée'}
-        ), 400
-
+        return jsonify({'status': 'error', 'message': 'Action non autorisée'}), 400
 
 @app.route('/open-url', methods=['POST'])
 def open_url():
