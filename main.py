@@ -7,7 +7,7 @@ import webbrowser
 from flask import Flask, jsonify, request
 import pyautogui
 
-# Désactiver les logs HTTP automatiques de Flask/Werkzeug pour garder la console propre
+# Désactiver les logs HTTP automatiques pour garder la console propre
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
@@ -16,13 +16,12 @@ pyautogui.PAUSE = 0
 
 app = Flask(__name__)
 
-# Gestion des rafales (Debounce / Coalescing) pour ne garder que la dernière action
+# Gestion des rafales uniquement pour les actions uniques (clics, touches)
 _rafale_lock = threading.Lock()
 _derniere_action_timer = None
 _action_en_attente = None
-FENETRE_RAFALE = 0.05  # Fenêtre de 250 ms pour regrouper les actions simultanées
+FENETRE_RAFALE = 0.05
 
-# Variables constantes globales
 ACTIONS_AUTORISEES = (
     'fullscreen',
     'scrollup',
@@ -71,10 +70,6 @@ def after_request(response):
 
 
 def planifier_derniere_action(action_func, description="action"):
-    """
-    Enregistre l'action et ne planifie l'exécution que de la TOUTE DERNIÈRE action 
-    reçue pendant la fenêtre de rafale (anti-flood de reconnexion ou clics multiples).
-    """
     global _derniere_action_timer, _action_en_attente
 
     with _rafale_lock:
@@ -102,7 +97,6 @@ def planifier_derniere_action(action_func, description="action"):
 
 
 def verifier_age_et_extraire_t():
-    """Vérifie si un paramètre de temps 't' est présent (en GET ou JSON) et calcule son âge."""
     t_val = request.args.get('t')
     if not t_val and request.is_json:
         data = request.get_json(silent=True) or {}
@@ -111,11 +105,9 @@ def verifier_age_et_extraire_t():
     if t_val:
         try:
             t_float = float(t_val)
-            # Si le timestamp est en millisecondes (ex: Date.now()), le convertir en secondes
             if t_float > 10**11:
                 t_float /= 1000.0
-            age = time.time() - t_float
-            return age
+            return time.time() - t_float
         except (ValueError, TypeError):
             pass
     return None
@@ -123,15 +115,12 @@ def verifier_age_et_extraire_t():
 
 @app.route('/press/<action_type>', methods=['GET', 'POST'])
 def press_key(action_type):
-    """Exécute une action clavier, souris ou système via un switch/case avec protection anti-rafale."""
     global ACTIONS_AUTORISEES, MOVE_PIXELS
 
     if action_type in ACTIONS_AUTORISEES:
-        # Vérification de l'âge (> 5 secondes -> ignoré)
         age = verifier_age_et_extraire_t()
         if age is not None and age > 5.0:
-            print(f"[i] Action {action_type} ignorée car trop ancienne (âge: {age:.1f}s)")
-            return jsonify({'status': 'ignored', 'message': 'Action trop ancienne ignorée'}), 200
+            return jsonify({'status': 'ignored', 'message': 'Action trop ancienne'}), 200
 
         def action_to_execute():
             match action_type:
@@ -176,65 +165,46 @@ def press_key(action_type):
                     pyautogui.press(action_type)
 
         planifier_derniere_action(action_to_execute, f"action {action_type}")
-        return jsonify(
-            {'status': 'success', 'message': f'Action {action_type} mise en file d\'attente !'}
-        ), 200
+        return jsonify({'status': 'success'}), 200
     else:
-        print(f'[-] Tentative d\'action non autorisée : {action_type}')
-        return jsonify(
-            {'status': 'error', 'message': 'Action non autorisée'}
-        ), 400
+        return jsonify({'status': 'error', 'message': 'Action non autorisée'}), 400
 
 
 @app.route('/open-url', methods=['POST'])
 def open_url():
-    """Ouvre une URL directement dans le navigateur avec protection anti-rafale."""
     try:
         data = request.json or {}
         url = data.get('url', '')
         if url:
             age = verifier_age_et_extraire_t()
             if age is not None and age > 5.0:
-                return jsonify({'status': 'ignored', 'message': 'URL trop ancienne ignorée'}), 200
-
-            def action_to_execute():
-                webbrowser.open(url)
-
-            planifier_derniere_action(action_to_execute, f"open-url {url}")
-            return jsonify({'status': 'success', 'message': 'URL mise en file !'}), 200
-        print("[-] Erreur : URL vide lors de la tentative d'ouverture")
-        return jsonify({'status': 'error', 'message': 'URL vide'}), 400
+                return jsonify({'status': 'ignored'}), 200
+            planifier_derniere_action(lambda: webbrowser.open(url), f"open-url {url}")
+            return jsonify({'status': 'success'}), 200
+        return jsonify({'status': 'error'}), 400
     except Exception as e:
-        print(f"[-] Erreur lors de l'ouverture de l'URL : {str(e)}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
 @app.route('/type', methods=['POST'])
 def type_text():
-    """Simule la saisie clavier d'une chaîne de texte avec protection anti-rafale."""
     try:
         data = request.json or {}
         text = data.get('text', '')
         if text:
             age = verifier_age_et_extraire_t()
             if age is not None and age > 5.0:
-                return jsonify({'status': 'ignored', 'message': 'Texte trop ancien ignoré'}), 200
-
-            def action_to_execute():
-                pyautogui.write(text, interval=0)
-
-            planifier_derniere_action(action_to_execute, "type_text")
-            return jsonify({'status': 'success', 'message': 'Texte mis en file !'}), 200
-        print("[-] Erreur : Texte vide lors de la tentative de saisie")
-        return jsonify({'status': 'error', 'message': 'Texte vide'}), 400
+                return jsonify({'status': 'ignored'}), 200
+            planifier_derniere_action(lambda: pyautogui.write(text, interval=0), "type_text")
+            return jsonify({'status': 'success'}), 200
+        return jsonify({'status': 'error'}), 400
     except Exception as e:
-        print(f'[-] Erreur de saisie : {str(e)}')
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
 @app.route('/move', methods=['POST'])
 def move_mouse():
-    """Déplace directement le curseur de la souris avec protection anti-rafale."""
+    """EXÉCUTION INSTANTANÉE DIRECTE (Pas de timer) pour une fluidité maximale du joystick."""
     try:
         data = request.get_json(silent=True) or {}
         dx = int(data.get('dx', 0))
@@ -242,12 +212,8 @@ def move_mouse():
         if dx != 0 or dy != 0:
             age = verifier_age_et_extraire_t()
             if age is not None and age > 5.0:
-                return jsonify({'status': 'ignored', 'message': 'Mouvement trop ancien ignoré'}), 200
-
-            def action_to_execute():
-                pyautogui.moveRel(dx, dy)
-
-            planifier_derniere_action(action_to_execute, "move_mouse")
+                return jsonify({'status': 'ignored'}), 200
+            pyautogui.moveRel(dx, dy)
         return jsonify({'status': 'success'}), 200
     except Exception as e:
         print(f'[-] Erreur lors du déplacement de la souris : {str(e)}')
