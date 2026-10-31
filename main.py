@@ -20,7 +20,7 @@ app = Flask(__name__)
 _rafale_lock = threading.Lock()
 _derniere_action_timer = None
 _action_en_attente = None
-FENETRE_RAFALE = 0.25  # Fenêtre de 250 ms pour regrouper les actions simultanées
+FENETRE_RAFALE = 0.05  # Fenêtre de 250 ms pour regrouper les actions simultanées
 
 # Variables constantes globales
 ACTIONS_AUTORISEES = (
