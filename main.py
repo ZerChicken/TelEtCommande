@@ -255,5 +255,6 @@ def move_mouse():
 
 
 if __name__ == '__main__':
-    print('=== Serveur Télécommande PC démarré ===')
+    print('=== PC Remote Control Server Started ===')
+    print('Press Ctrl+C to stop the server.')
     app.run(host='0.0.0.0', port=5000, threaded=True)
