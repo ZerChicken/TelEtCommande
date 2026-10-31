@@ -42,10 +42,20 @@ Le serveur s'exécutera sur le port 5000 et acceptera les commandes émises depu
 
 * Raccourcis de navigation et système (Plein écran avec la touche F, défilement haut/bas, entrée, fermeture d'onglet, mise en veille).
 
+* Joystick tactile : Déplacement analogique ultra-fluide et réactif de la souris (avec accumulateur anti-perte de paquets).
+
 ## Endpoints API
 
-Le serveur Flask écoute sur les requêtes GET ou POST sous la structure suivante :
+## Endpoints API
 
+Le serveur Flask écoute sur les requêtes et endpoints suivants :
+
+* **`/press/<action_type>`** (GET, POST) : Exécute une touche ou une action clavier/système (ex: `fullscreen`, `space`, `volumeup`, `click`, etc.).
+* **`/move`** (POST) : Déplace le curseur de la souris de manière relative (`dx`, `dy`).
+* **`/type`** (POST) : Simule la saisie d'une chaîne de caractères (`text`).
+* **`/open-url`** (POST) : Ouvre une URL spécifique dans le navigateur de la machine distante (`url`).
+
+Exemple de structure d'appel :
 ```Plaintext
-http://<IP_TAILSCALE>:5000/press/<action_type>
+http://<IP_TAILSCALE>:5000/press/fullscreen
 ```
