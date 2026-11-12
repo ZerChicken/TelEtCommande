@@ -6,6 +6,7 @@ import threading
 import webbrowser
 from flask import Flask, jsonify, request
 import pyautogui
+from waitress import serve
 
 # Désactiver les logs HTTP automatiques pour garder la console propre
 log = logging.getLogger('werkzeug')
@@ -221,6 +222,15 @@ def move_mouse():
 
 
 if __name__ == '__main__':
-    print('=== PC Remote Control Server Started ===')
+    print('=== PC Remote Control Server Started (Waitress WSGI) ===')
     print('Press Ctrl+C to stop the server.')
-    app.run(host='0.0.0.0', port=5000, threaded=True)
+    
+    # Lancement avec Waitress
+    serve(
+        app, 
+        host='0.0.0.0', 
+        port=5000, 
+        threads=8,               # Nombre de threads simultanés
+        connection_limit=100,    # Nombre max de connexions
+        clear_untrusted_proxy_headers=True
+    )
